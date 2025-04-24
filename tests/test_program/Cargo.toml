@@ -1,0 +1,13 @@
+[package]
+name = "test_program"
+version = "0.1.0"
+edition = "2024"
+
+[features]             
+default = ["cpi"]
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+
+[dependencies]
+anchor-lang = "0.31.1"
+anchor_modularized_program = { path = "../.." }

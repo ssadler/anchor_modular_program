@@ -7,7 +7,10 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-anchor-syn = "0.31.1"
-proc-macro2 = { version = "1", features = ["span-locations"] }
+anchor-syn = "0.31"
+proc-macro2 = "1"
 quote = "1"
-syn = { version = "1", features = ["full", "extra-traits", "parsing"] }
+syn = "1"
+
+[dev-dependencies]
+test_program = { path = "./tests/test_program" }
