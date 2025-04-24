@@ -10,6 +10,10 @@ and you have the required types (contexts, instruction argument types) at
 
 ```rust
 
+use anchor_lang::prelude::*;
+use anchor_modularized_program::*;
+
+mod extra;
 use extra::types::*;
 
 #[modularized_program(
