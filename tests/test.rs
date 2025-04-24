@@ -14,24 +14,24 @@ fn test_foo_ok() {
 
 #[test]
 fn test_bar_ok() {
-    let mut data = instruction::BarInstr::DISCRIMINATOR.to_vec();
-    data.extend([3,0,0,0,0,0,0,0]);
-
-    let account = get_account();
-    entry(&test_program::ID, &[account], &data).unwrap();
+    run_bar(3);
 }
 
 
 #[test]
 #[should_panic]
 fn test_bar_panic() {
+    run_bar(0);
+}
+
+
+fn run_bar(n: u8) {
     let mut data = instruction::BarInstr::DISCRIMINATOR.to_vec();
-    data.extend([0,0,0,0,0,0,0,0]);
+    data.extend([n,0,0,0,0,0,0,0]);
 
     let account = get_account();
     entry(&test_program::ID, &[account], &data).unwrap();
 }
-
 
 const KEY: Pubkey = Pubkey::new_from_array([0;32]);
 static mut LA: u64 = 0;
