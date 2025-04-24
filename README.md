@@ -12,8 +12,14 @@ and you have the required types (contexts, instruction argument types) at
 
 use extra::types::*;
 
-#[modularized_program(modules=[extra::instructions])]
-mod my_program { ... }
+#[modularized_program(
+    modules=[
+        extra::instructions
+    ]
+)]
+mod my_program {
+    use super::*;
+}
 ```
 
 Instructions from `extra::instructions` will be included (forwarded, rather than
