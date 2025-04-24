@@ -1,5 +1,5 @@
 [package]
-name = "anchor_modular_program"
+name = "anchor-modular-program"
 version = "0.1.0"
 edition = "2021"
 

@@ -57,10 +57,19 @@ fn build_relay(spec: &ModuleSpec, ix: Ix) -> ItemFn {
         .filter_map(|pt| match pt { syn::Pat::Ident(id) => Some(id.ident.clone()), _ => None })
         .collect();
 
-    parse_quote! {
-        #(#attrs)*
-        pub fn #new_name #generics(#inputs) #output {
-            #path::#fn_name(#(#arg_names),*)
+    if let Some(w) = &spec.wrapper {
+        parse_quote! {
+            #(#attrs)*
+            pub fn #new_name #generics(#inputs) #output {
+                { #w!(#path::#fn_name, #inputs) }
+            }
+        }
+    } else {
+        parse_quote! {
+            #(#attrs)*
+            pub fn #new_name #generics(#inputs) #output {
+                #path::#fn_name(#(#arg_names),*)
+            }
         }
     }
 }
@@ -136,7 +145,8 @@ impl parse::Parse for ProgramMacro {
 struct ModuleSpec {
     module: Path,
     prefix: Option<String>,
-    file_path: Option<String>
+    file_path: Option<String>,
+    wrapper: Option<Path>
 }
 
 impl ModuleSpec {
@@ -158,7 +168,7 @@ impl parse::Parse for ModuleSpec {
             Ok(
                 if name == "file_path" || name == "prefix" {
                     (name, (Some(p.parse::<LitStr>()?.value()), None))
-                } else if name == "module" {
+                } else if name == "module" || name == "wrapper" {
                     (name, (None, Some(p.parse::<Path>()?)))
                 } else {
                     panic!("Invalid module spec param: {}", name);
@@ -169,7 +179,7 @@ impl parse::Parse for ModuleSpec {
 
         if input.peek(Ident) {
             let module = input.parse::<Path>()?;
-            Ok(ModuleSpec { module, prefix: None, file_path: None })
+            Ok(ModuleSpec { module, prefix: None, file_path: None, wrapper: None })
         } else {
             let content;
             syn::braced!(content in input);
@@ -180,6 +190,7 @@ impl parse::Parse for ModuleSpec {
                 module: hm.remove("module").expect("module is required").1.unwrap(),
                 prefix: hm.remove("prefix").map(|t| t.0).flatten(),
                 file_path: hm.remove("file_path").map(|t| t.0).flatten(),
+                wrapper: hm.remove("wrapper").map(|t| t.1).flatten(),
             })
         }
     }
@@ -201,5 +212,4 @@ fn insert_fns_into_first_module(input: proc_macro::TokenStream, fns: Vec<ItemFn>
 
     quote! { #item_mod }.into()
 }
-
 

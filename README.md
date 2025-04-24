@@ -39,9 +39,10 @@ As well as specifying a module path in the local program, you can provide a spec
 #[modular_program(
     modules=[
         {
-            module: etc,                  // rust module path to instructions module
-            prefix: "etc",                // prefixed with "etc_", or "" for no prefix
-            file_path: "./src/etc/mod.rs" // path to instructions
+            module: etc,                   // rust module path to instructions module
+            prefix: "etc",                 // prefixed with "etc_", or "" for no prefix
+            file_path: "./src/etc/mod.rs", // path to instructions
+            wrapper: path::to::macro       // see [#wrapper-macros](Wrapper Macros)
         }
     ]
 )
@@ -50,6 +51,24 @@ As well as specifying a module path in the local program, you can provide a spec
 ## Examples
 
 See the [Test Program](/tests/test_program/src/lib.rs) for examples.
+
+## Wrapper Macros
+
+It's possible to specify a macro that will define how the instruction is called,
+the macro takes the path to the function and the instruction parameters, i.e.:
+
+```rust
+macro_rules! call_instruction_macro {
+    ($ix:path, $ctx:ident: $ctx_type:ty $(, $arg:ident: $arg_type:ty )*) => {
+      { msg!("Before");
+        let ctx = MyContextWrapper::new($ctx);
+        let out = $ix(ctx $(, $arg))?;
+        msg!("After");
+        out
+      }
+    };
+}
+```
 
 ## How it works
 

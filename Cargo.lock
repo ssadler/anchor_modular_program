@@ -173,6 +173,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "anchor-modular-program"
+version = "0.1.0"
+dependencies = [
+ "anchor-syn",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+ "test_program",
+]
+
+[[package]]
 name = "anchor-syn"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -188,17 +199,6 @@ dependencies = [
  "sha2 0.10.8",
  "syn 1.0.109",
  "thiserror 1.0.69",
-]
-
-[[package]]
-name = "anchor_modular_program"
-version = "0.1.0"
-dependencies = [
- "anchor-syn",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
- "test_program",
 ]
 
 [[package]]
@@ -1881,7 +1881,7 @@ name = "test_program"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
- "anchor_modular_program",
+ "anchor-modular-program",
 ]
 
 [[package]]

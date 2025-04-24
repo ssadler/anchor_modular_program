@@ -10,4 +10,4 @@ no-entrypoint = []
 
 [dependencies]
 anchor-lang = "0.31.1"
-anchor_modular_program = { path = "../.." }
+anchor-modular-program = { path = "../.." }
