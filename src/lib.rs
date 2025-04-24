@@ -7,7 +7,7 @@ use quote::*;
 /*
  * Replacement program macro to include additional instruction modules, i.e.:
  *
- * #[modularized_program(
+ * #[modular_program(
  *     modules=[
  *         foo::instructions,
  *         bar::instructions
@@ -19,7 +19,7 @@ use quote::*;
  */
 
 #[proc_macro_attribute]
-pub fn modularized_program(
+pub fn modular_program(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {

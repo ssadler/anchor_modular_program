@@ -1,4 +1,4 @@
-# Anchor Modularized Program
+# Anchor Modular Program
 
 Replacement `#[program]` macro that allows specifying additional instruction modules
 
@@ -11,14 +11,14 @@ and you have the required types (contexts, instruction argument types) at
 ```rust
 
 use anchor_lang::prelude::*;
-use anchor_modularized_program::*;
+use anchor_modular_program::*;
 
 declare_id!("...");
 
 mod extra;
 use extra::types::*;
 
-#[modularized_program(
+#[modular_program(
     modules=[
         extra::instructions
     ]

@@ -191,7 +191,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "anchor_modularized_program"
+name = "anchor_modular_program"
 version = "0.1.0"
 dependencies = [
  "anchor-syn",
@@ -1881,7 +1881,7 @@ name = "test_program"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
- "anchor_modularized_program",
+ "anchor_modular_program",
 ]
 
 [[package]]
