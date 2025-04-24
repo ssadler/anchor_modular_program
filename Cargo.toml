@@ -2,6 +2,8 @@
 name = "anchor-modular-program"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Replacement #[program] macro that allows specifying additional instruction modules"
 
 [lib]
 proc-macro = true
