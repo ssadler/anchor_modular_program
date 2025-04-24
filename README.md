@@ -31,7 +31,25 @@ mod my_program {
 Instructions from `extra::instructions` will be included (forwarded, rather than
 included directly), prefixed with `extra_`.
 
-See the [Test Program](/tests/test_program/src/lib.rs) for an example.
+## Overrides
+
+As well as specifying a module path in the local program, you can provide a spec:
+
+```rust
+#[modular_program(
+    modules=[
+        {
+            module: etc,                  // rust module path to instructions module
+            prefix: "etc",                // prefixed with "etc_", or "" for no prefix
+            file_path: "./src/etc/mod.rs" // path to instructions
+        }
+    ]
+)
+```
+
+## Examples
+
+See the [Test Program](/tests/test_program/src/lib.rs) for examples.
 
 ## How it works
 

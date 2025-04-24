@@ -1,35 +1,23 @@
-use std::io::Read;
+use std::{collections::HashMap, io::Read};
 use anchor_syn::*;
+//use proc_macro::Ident;
 use syn::*;
 use quote::*;
 
-
-/*
- * Replacement program macro to include additional instruction modules, i.e.:
- *
- * #[modular_program(
- *     modules=[
- *         foo::instructions,
- *         bar::instructions
- *     ]
- * )]
- * pub mod my_program {
- *     use super::*;
- * }
- */
 
 #[proc_macro_attribute]
 pub fn modular_program(
     args: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    let ProgramMacro { programs } = syn::parse_macro_input!(args as ProgramMacro);
+    let ProgramMacro { modules } = syn::parse_macro_input!(args as ProgramMacro);
 
-    let fns = programs.into_iter()
-        .map(|(path, p)| {
-            p.ixs.into_iter().map(|ix| build_relay(&path, ix)).collect::<Vec<_>>()
+    let fns = modules.into_iter()
+        .map(|m| (m.clone(), get_program(m.clone())))
+        .flat_map(|(spec, p)| {
+            p.ixs.into_iter().map(|ix| build_relay(&spec, ix)).collect::<Vec<_>>()
         })
-        .flatten().collect();
+        .collect();
 
     let input = insert_fns_into_first_module(input, fns);
     let program = syn::parse_macro_input!(input as anchor_syn::Program);
@@ -45,14 +33,22 @@ pub fn modular_program(
  * }
  */
 
-fn build_relay(path: &Path, ix: Ix) -> ItemFn {
-    //ix.cfgs
+fn build_relay(spec: &ModuleSpec, ix: Ix) -> ItemFn {
+
     let item_fn = &ix.raw_method;
     let ItemFn { attrs, .. } = &item_fn;
     let Signature { ident: fn_name, inputs, generics, output, .. } = &item_fn.sig;
 
+    let path = spec.module.clone();
     let first = path.segments[0].clone().ident;
-    let new_name = Ident::new(format!("{}_{}", first, fn_name).as_str(), first.span());
+
+    let new_name = match &spec.prefix {
+        Some(s) if s.is_empty() => fn_name.clone(),
+        o => {
+            let prefix = o.clone().unwrap_or(first.to_string());
+            Ident::new(format!("{}_{}", prefix, fn_name).as_str(), first.span())
+        }
+    };
 
     // Extract argument names for the function call
     let arg_names: Vec<Ident> = inputs
@@ -75,12 +71,12 @@ fn build_relay(path: &Path, ix: Ix) -> ItemFn {
  * foo::instructions is converted to "$PROGRAM_DIR/src/foo/instructions.rs"
  */
 
-fn resolve_module(path: Path) -> Program {
+fn get_program(spec: ModuleSpec) -> Program {
 
     let mod_path = format!(
-        "{}/src{}.rs",
+        "{}/{}",
         std::env::var("CARGO_MANIFEST_DIR").unwrap(),
-        path.segments.into_pairs().fold(String::new(), |s, p| format!("{}/{}", s, p.value().ident))
+        spec.get_file_path()
     );
 
     let mut code_str = String::new();
@@ -111,7 +107,7 @@ fn resolve_module(path: Path) -> Program {
  */
 
 #[derive(Debug)]
-struct ProgramMacro { programs: Vec<(Path, Program)>, }
+struct ProgramMacro { modules: Vec<ModuleSpec>, }
 
 impl parse::Parse for ProgramMacro {
     fn parse(input: parse::ParseStream) -> syn::Result<Self> {
@@ -127,15 +123,65 @@ impl parse::Parse for ProgramMacro {
         // Parse the bracketed list `[cell, placement]`
         let content;
         syn::bracketed!(content in input);
-        let idents: syn::punctuated::Punctuated<Path, Token![,]> =
-            content.parse_terminated(|p| p.parse::<Path>())?;
+        let specs = content.parse_terminated::<ModuleSpec, Token![,]>(|p| p.parse())?;
 
         // Convert Punctuated<Ident, _> to Vec<Ident>
-        let programs = idents.into_iter()
-            .map(|path| (path.clone(), resolve_module(path)))
-            .collect();
+        let modules = specs.into_iter().collect();
 
-        Ok(ProgramMacro { programs })
+        Ok(ProgramMacro { modules })
+    }
+}
+
+#[derive(Clone, Debug)]
+struct ModuleSpec {
+    module: Path,
+    prefix: Option<String>,
+    file_path: Option<String>
+}
+
+impl ModuleSpec {
+    fn get_file_path(&self) -> String {
+        self.file_path.clone().unwrap_or_else(|| {
+            let p = self.module.segments.iter().fold(String::new(), |s, p| format!("{}/{}", s, p.ident));
+            format!("./src{}.rs", p)
+        })
+    }
+}
+
+impl parse::Parse for ModuleSpec {
+    fn parse(input: parse::ParseStream) -> Result<Self> {
+
+        type T = (String, (Option<String>, Option<Path>));
+        fn parse_field(p: parse::ParseStream) -> syn::Result<T> {
+            let name = p.parse::<Ident>()?.to_string();
+            p.parse::<Token![:]>()?;
+            Ok(
+                if name == "file_path" || name == "prefix" {
+                    (name, (Some(p.parse::<LitStr>()?.value()), None))
+                } else if name == "module" {
+                    (name, (None, Some(p.parse::<Path>()?)))
+                } else {
+                    panic!("Invalid module spec param: {}", name);
+                }
+            )
+        }
+
+
+        if input.peek(Ident) {
+            let module = input.parse::<Path>()?;
+            Ok(ModuleSpec { module, prefix: None, file_path: None })
+        } else {
+            let content;
+            syn::braced!(content in input);
+            let fields = content.parse_terminated::<T, Token![,]>(parse_field)?;
+            let mut hm = fields.clone().into_iter().collect::<HashMap<String, _>>();
+            assert!(hm.len() == fields.len(), "duplicate field");
+            Ok(ModuleSpec {
+                module: hm.remove("module").expect("module is required").1.unwrap(),
+                prefix: hm.remove("prefix").map(|t| t.0).flatten(),
+                file_path: hm.remove("file_path").map(|t| t.0).flatten(),
+            })
+        }
     }
 }
 

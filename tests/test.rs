@@ -6,7 +6,7 @@ use test_program::anchor_lang::prelude::*;
 #[test]
 fn test_foo_ok() {
     let data = &[1,2,3,4,5,6,7,8,5,0,0,0,0,0,0,0];
-    assert_eq!(instruction::FooInstr::DISCRIMINATOR, &data[..8]);
+    assert_eq!(instruction::OofInstr::DISCRIMINATOR, &data[..8]);
 
     let account = get_account();
     entry(&test_program::ID, &[account], data).unwrap();
