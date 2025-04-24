@@ -1,21 +1,3 @@
-/*
- * A #[program] proc macro that lets you specify additional instruction modules.
- *
- * ## Usage:
- *
- * ```
- * #[modularized_program(modules=[extra::instructions])]
- * mod my_program { ... }
- * ```
- *
- * "Relay" instructions will be inserted into the program module
- * in lib.rs, prefixed with the first item in the path (eg, "extra_").
- *
- * !! You must import all required types for the function signatures in lib.rs.
- *
- */
-
-
 use std::io::Read;
 use anchor_syn::*;
 use syn::*;
