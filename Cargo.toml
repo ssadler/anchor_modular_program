@@ -1,0 +1,13 @@
+[package]
+name = "misc_macros"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+anchor-syn = "0.31.1"
+proc-macro2 = { version = "1", features = ["span-locations"] }
+quote = "1"
+syn = { version = "1", features = ["full", "extra-traits", "parsing"] }
