@@ -25,6 +25,8 @@ mod my_program {
 Instructions from `extra::instructions` will be included (forwarded, rather than
 included directly), prefixed with `extra_`.
 
+See the [Test Program](/tests/test_program/src/lib.rs) for an example.
+
 ## How it works
 
 1. In the above example, `extra::instructions` is converted to the file path
