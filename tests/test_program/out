@@ -190,25 +190,23 @@ mod foo {
             }
         }
     }
-    pub mod instrocshons {
-        use anchor_lang::prelude::*;
-        use super::contexts::*;
-        pub fn instr(ctx: Context<FooContext>, n: u64) -> Result<()> {
-            match (&n, &10) {
-                (left_val, right_val) => {
-                    if !(*left_val == *right_val) {
-                        let kind = ::core::panicking::AssertKind::Eq;
-                        ::core::panicking::assert_failed(
-                            kind,
-                            &*left_val,
-                            &*right_val,
-                            ::core::option::Option::None,
-                        );
-                    }
+    use anchor_lang::prelude::*;
+    use contexts::*;
+    pub fn instr(ctx: Context<FooContext>, n: u64) -> Result<()> {
+        match (&n, &10) {
+            (left_val, right_val) => {
+                if !(*left_val == *right_val) {
+                    let kind = ::core::panicking::AssertKind::Eq;
+                    ::core::panicking::assert_failed(
+                        kind,
+                        &*left_val,
+                        &*right_val,
+                        ::core::option::Option::None,
+                    );
                 }
-            };
-            Ok(())
-        }
+            }
+        };
+        Ok(())
     }
 }
 mod bar {
@@ -396,7 +394,10 @@ mod bar {
     pub mod instructions {
         use anchor_lang::prelude::*;
         use super::contexts::*;
-        pub fn instr(ctx: Context<BarContext>, n: u64) -> Result<()> {
+        pub fn instr<'info>(
+            ctx: Context<'_, '_, '_, 'info, BarContext<'info>>,
+            n: u64,
+        ) -> Result<()> {
             match (&n, &3) {
                 (left_val, right_val) => {
                     if !(*left_val == *right_val) {
@@ -415,7 +416,6 @@ mod bar {
     }
 }
 use foo::contexts::*;
-use foo::instrocshons as baz;
 use bar::contexts::*;
 use self::big_program::*;
 /// The Anchor codegen exposes a programming model where a user defines
@@ -2884,11 +2884,20 @@ mod __private {
 }
 pub mod big_program {
     use super::*;
-    pub fn bar_instr(ctx: Context<BarContext>, n: u64) -> Result<()> {
+    pub fn bar_instr<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, BarContext<'info>>,
+        n: u64,
+    ) -> Result<()> {
         bar::instructions::instr(ctx, n)
     }
-    pub fn oof_instr(ctx: Context<FooContext>, n: u64) -> Result<()> {
-        baz::instr(ctx, n << 1)
+    pub fn oof_instr<'a, 'b, 'c, 'info>(
+        ctx: Context<'a, 'b, 'c, 'info, FooContext<'info>>,
+        n: u64,
+    ) -> Result<()> {
+        {
+            ::solana_msg::sol_log("Foo called");
+            foo::instr(ctx, n << 1)
+        }
     }
 }
 /// An Anchor generated module containing the program's set of
@@ -3058,14 +3067,14 @@ pub mod cpi {
     /// mirroring the structs deriving `Accounts`, where each field is
     /// an `AccountInfo`. This is useful for CPI.
     pub mod accounts {
-        pub use crate::__cpi_client_accounts_foo_context::*;
         pub use crate::__cpi_client_accounts_bar_context::*;
+        pub use crate::__cpi_client_accounts_foo_context::*;
     }
 }
 /// An Anchor generated module, providing a set of structs
 /// mirroring the structs deriving `Accounts`, where each field is
 /// a `Pubkey`. This is useful for specifying accounts for a client.
 pub mod accounts {
-    pub use crate::__client_accounts_foo_context::*;
     pub use crate::__client_accounts_bar_context::*;
+    pub use crate::__client_accounts_foo_context::*;
 }

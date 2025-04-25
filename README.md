@@ -63,6 +63,7 @@ macro_rules! call_instruction_macro {
       { msg!("Before");
         // If you want to use a custom context wrapper, you need to
         // `use` it `as Context` in your instructions module
+        // and it should have the same type signature as `Context`.
         let ctx = MyContextWrapper::new($ctx);
         let out = $ix(ctx $(, $arg))?;
         msg!("After");

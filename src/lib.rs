@@ -4,17 +4,17 @@
 //! instructions into modules.
 //!
 //!
-//! ```
-//! mod extra;                 
-//! use extra::types::*;       
-//!                            
-//! #[modular_program(         
-//!     modules=[              
+//! ```rust,no_run
+//! mod extra;
+//! use extra::types::*;
+//!
+//! #[modular_program(
+//!     modules=[
 //!         extra::instructions
-//!     ]                      
-//! )]                         
-//! mod my_program {           
-//!     use super::*;          
+//!     ]
+//! )]
+//! mod my_program {
+//!     use super::*;
 //! }
 //! ```
 
@@ -29,7 +29,7 @@ use quote::*;
 /// Modules can either be a rust path to an instructions module,
 /// or it can be an object:
 ///
-/// ```
+/// ```rust,no_run
 /// #[modular_program(modules=[
 ///     mymod::instructions,
 ///     {
@@ -53,8 +53,8 @@ use quote::*;
 ///         macro: path::to::macro
 ///     }
 /// ])]
-/// mod my_program {           
-///     use super::*;          
+/// mod my_program {
+///     use super::*;
 /// }
 /// ```
 ///
@@ -68,11 +68,11 @@ pub fn modular_program(
     let fns = modules.into_iter()
         .map(|m| (m.clone(), get_program(m.clone())))
         .flat_map(|(spec, p)| {
-            p.ixs.into_iter().map(|ix| build_relay(&spec, ix)).collect::<Vec<_>>()
+            p.ixs.into_iter().map(|ix| build_relay(spec.clone(), ix)).collect::<Vec<_>>()
         })
         .collect();
 
-    let input = insert_fns_into_first_module(input, fns);
+    let input = append_to_program_module(input, fns);
     let program = syn::parse_macro_input!(input as anchor_syn::Program);
     program.to_token_stream().into()
 }
@@ -86,47 +86,44 @@ pub fn modular_program(
  * }
  */
 
-fn build_relay(spec: &ModuleSpec, ix: Ix) -> ItemFn {
+fn build_relay(spec: ModuleSpec, ix: Ix) -> Item {
 
-    let item_fn = &ix.raw_method;
-    let ItemFn { attrs, .. } = &item_fn;
-    let Signature { ident: fn_name, inputs, generics, output, .. } = &item_fn.sig;
+    let Ix { raw_method: ItemFn { attrs, mut sig, .. }, .. } = ix;
 
-    let path = spec.module.clone();
-    let first = path.segments[0].clone().ident;
+    let module = spec.module.clone();
+    let first = module.segments[0].clone().ident;
 
-    let new_name = match &spec.prefix {
-        Some(s) if s.is_empty() => fn_name.clone(),
-        o => {
-            let prefix = o.clone().unwrap_or(first.to_string());
-            Ident::new(format!("{}_{}", prefix, fn_name).as_str(), first.span())
-        }
-    };
+    // Prefix instruction name
+    let old_name = sig.ident.clone();
+    let prefix = spec.prefix.clone().unwrap_or(first.to_string());
+    if !prefix.is_empty() {
+        sig.ident = Ident::new(format!("{}_{}", prefix, sig.ident).as_str(), first.span());
+    }
 
-    let mut inputs = inputs.clone();
-    let arg_names = inputs.iter_mut().filter_map(|arg| {
+    // Normalize signature
+    sig.inputs.iter_mut().enumerate().for_each(|(i, arg)| {
         if let FnArg::Typed(pt) = arg {
+            // Remove mutability in relay arguments
             if let syn::Pat::Ident(id) = &mut *pt.pat {
                 id.mutability = None;
-                return Some(id.ident.clone());
+            }
+            // Normalize lifetimes
+            if i == 0 {
+                let ai = &ix.anchor_ident;
+                pt.ty = parse_quote! { Context<'a, 'b, 'c, 'info, #ai<'info>> };
+                sig.generics = parse_quote! { <'a, 'b, 'c, 'info> };
             }
         }
-        None
-    }).collect::<Vec<_>>();
+    });
 
-    if let Some(w) = &spec.wrapper {
-        parse_quote! {
-            #(#attrs)*
-            pub fn #new_name #generics(#inputs) #output {
-                { #w!(#path::#fn_name, #inputs) }
-            }
-        }
-    } else {
-        parse_quote! {
-            #(#attrs)*
-            pub fn #new_name #generics(#inputs) #output {
-                #path::#fn_name(#(#arg_names),*)
-            }
+    let w: Path = parse_quote! { _modular_context_default_wrapper };
+    let wrapper = spec.wrapper.unwrap_or(w);
+    let inputs = &sig.inputs;
+
+    parse_quote! {
+        #(#attrs)*
+        pub #sig where 'c: 'info {
+            #wrapper!(#module::#old_name, #inputs)
         }
     }
 }
@@ -258,14 +255,27 @@ impl parse::Parse for ModuleSpec {
  * Append instruction functions to main program module
  */
 
-fn insert_fns_into_first_module(input: proc_macro::TokenStream, fns: Vec<ItemFn>) -> proc_macro::TokenStream {
+fn append_to_program_module(
+    input: proc_macro::TokenStream,
+    fns: Vec<Item>
+) -> proc_macro::TokenStream {
 
     let mut item_mod: ItemMod = parse2(input.into()).expect("Failed to parse main program module");
 
+    let default_wrapper: Item = parse_quote! {
+        macro_rules! _modular_context_default_wrapper {
+            ($ix:path, $ctx:ident: $ctx_type:ty $(, $arg:ident: $arg_type:ty )*) => {
+                $ix($ctx $(, $arg)*)
+            }
+        }
+    };
+
     item_mod.content
         .as_mut()
-        .expect("Program module has no body?")
-        .1.extend(fns.into_iter().map(Into::into));
+        .map(|m| {
+            m.1.push(default_wrapper);
+            m.1.extend(fns);
+        });
 
     quote! { #item_mod }.into()
 }
