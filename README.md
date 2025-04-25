@@ -64,7 +64,7 @@ macro_rules! call_instruction_macro {
         let ctx = MyContextWrapper::new($ctx);
         let out = $ix(ctx $(, $arg))?;
         msg!("After");
-        out
+        Ok(out)
       }
     };
 }

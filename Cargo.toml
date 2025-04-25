@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 description = "Replacement #[program] macro that allows specifying additional instruction modules"
+repository = "https://github.com/ssadler/anchor_modular_program"
+readme = "README.md"                                            
+
 
 [lib]
 proc-macro = true
