@@ -1,10 +1,63 @@
+#![warn(missing_docs)]
+
+//! A replacement #\[program\] macro for anchor-lang that allows splitting
+//! instructions into modules.
+//!
+//!
+//! ```
+//! mod extra;                 
+//! use extra::types::*;       
+//!                            
+//! #[modular_program(         
+//!     modules=[              
+//!         extra::instructions
+//!     ]                      
+//! )]                         
+//! mod my_program {           
+//!     use super::*;          
+//! }
+//! ```
+
+
+
 use std::{collections::HashMap, io::Read};
 use anchor_syn::*;
-//use proc_macro::Ident;
 use syn::*;
 use quote::*;
 
 
+/// Modules can either be a rust path to an instructions module,
+/// or it can be an object:
+///
+/// ```
+/// #[modular_program(modules=[
+///     mymod::instructions,
+///     {
+///         // Required, module path to instructions
+///         module: path::to::instructions,
+///
+///         // Optional path, override where to look for the instructions
+///         file_path: "./src/mod/etc.rs",
+///
+///         // Optional prefix, empty for no prefix
+///         prefix: "prefix",
+///
+///         // Optional, A macro that wraps the call to the instruction, eg:
+///         // ```
+///         // macro_rules ix_wrapper {
+///         //     ($ix:path, $ctx:ident: $ctx_type:ty $(, $arg:ident: $arg_type:ty )*) => {
+///         //         $ix($ctx, $(, $arg)*)
+///         //     };
+///         // }
+///         // ```
+///         macro: path::to::macro
+///     }
+/// ])]
+/// mod my_program {           
+///     use super::*;          
+/// }
+/// ```
+///
 #[proc_macro_attribute]
 pub fn modular_program(
     args: proc_macro::TokenStream,
