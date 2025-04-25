@@ -103,12 +103,16 @@ fn build_relay(spec: &ModuleSpec, ix: Ix) -> ItemFn {
         }
     };
 
-    // Extract argument names for the function call
-    let arg_names: Vec<Ident> = inputs
-        .iter()
-        .filter_map(|arg| match arg { FnArg::Typed(pt) => Some(&*pt.pat), _ => None })
-        .filter_map(|pt| match pt { syn::Pat::Ident(id) => Some(id.ident.clone()), _ => None })
-        .collect();
+    let mut inputs = inputs.clone();
+    let arg_names = inputs.iter_mut().filter_map(|arg| {
+        if let FnArg::Typed(pt) = arg {
+            if let syn::Pat::Ident(id) = &mut *pt.pat {
+                id.mutability = None;
+                return Some(id.ident.clone());
+            }
+        }
+        None
+    }).collect::<Vec<_>>();
 
     if let Some(w) = &spec.wrapper {
         parse_quote! {

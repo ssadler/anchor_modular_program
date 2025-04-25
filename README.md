@@ -61,6 +61,8 @@ the macro takes the path to the function and the instruction parameters, i.e.:
 macro_rules! call_instruction_macro {
     ($ix:path, $ctx:ident: $ctx_type:ty $(, $arg:ident: $arg_type:ty )*) => {
       { msg!("Before");
+        // If you want to use a custom context wrapper, you need to
+        // `use` it `as Context` in your instructions module
         let ctx = MyContextWrapper::new($ctx);
         let out = $ix(ctx $(, $arg))?;
         msg!("After");
